@@ -10,6 +10,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -44,27 +45,61 @@ public class Fragment2 extends Fragment {
         Agency ca = presenter.getcAgency();
         Route cr = presenter.getcRoute();
         getStops("http://api.metro.net/agencies/"+ca.getId()+"/routes/"+cr.getId()+"/stops/");
-//        getStops("http://api.metro.net/agencies/lametro/routes/2/stops/");
 
         return view;
     }
-
     public void getStops(String url){
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url, new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
                 Log.d("ONRESPONSE", response);
-                Stop[] stops = processResultStop(response);
+                final Stop[] stops = processResultStop(response);
                 presenter.setStops(stops);
+                for(int i =0;i < stops.length;i++){
+                    String url = "http://api.metro.net/agencies/"+presenter.getcAgency().getId()+"/stops/"+stops[i].getId()+"/predictions/";
+                    final int finalI = i;
+                    StringRequest sr = new StringRequest(Request.Method.GET, url, new Response.Listener<String>() {
+                        @Override
+                        public void onResponse(String response) {
+                            Prediction[] ps = processResultPrediction(response);
+                            double sec = Double.MAX_VALUE;
+                            for(Prediction tempP : ps){
+                                if(tempP.getSeconds() < sec){
+                                    sec = tempP.getSeconds();
+                                }
+                            }
+                            presenter.getStops()[finalI].setWaktu(sec);
+                            presenter.updateStop();
+                        }
+                    }, new Response.ErrorListener() {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+
+                        }
+                    });
+                    queue.add(sr);
+                }
                 ui.updateStop();
             }
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                Log.d("ONRESPONSE ERROR", "");
+//                Log.d("ONRESPONSE ERROR", "");
             }
         });
         queue.add(stringRequest);
+    }
+    private Prediction[] processResultPrediction(String content){
+        Log.d("result_string",content);
+        try{
+            JSONObject json = new JSONObject(content);
+            JSONArray data = json.getJSONArray("items");
+            Gson gson = new Gson();
+            return gson.fromJson(data.toString(),Prediction[].class);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     private Stop[] processResultStop(String content) {

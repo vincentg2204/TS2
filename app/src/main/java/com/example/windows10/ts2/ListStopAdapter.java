@@ -55,6 +55,15 @@ class ListStopAdapter extends BaseAdapter{
 
         public void update(Stop stop){
             tvJudul.setText(stop.getDisplay_name());
+            if(stop.getWaktu() != -1){
+                String jam = (int)(stop.getWaktu()/3600)+"";
+                jam = ((jam.length() == 1)? "0" : "")+jam;
+                String menit = (int)((stop.getWaktu()%3600)/60)+"";
+                menit = ((menit.length()==1)?"0":"")+menit;
+                String detik = (int)(stop.getWaktu()%60)+"";
+                detik = ((detik.length()==1)?"0":"")+detik;
+                tvWaktu.setText(jam +":"+menit+":"+detik);
+            }
         }
     }
 }

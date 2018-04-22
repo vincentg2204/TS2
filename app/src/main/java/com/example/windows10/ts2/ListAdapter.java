@@ -1,5 +1,7 @@
 package com.example.windows10.ts2;
 
+import android.graphics.Color;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -69,6 +71,13 @@ public class ListAdapter extends BaseAdapter {
         }
         public void update(Route route){
             tvRute.setText(route.getDisplay_name());
+            Log.d("ROUTECOLOR",route.getFgColor()+" "+route.getBgColor());
+            if(route.getFgColor() != null) {
+                tvRute.setTextColor(Color.parseColor(route.getFgColor()));
+            }
+            if(route.getBgColor() != null) {
+                tvRute.setBackgroundColor(Color.parseColor(route.getBgColor()));
+            }
         }
     }
 }

@@ -5,12 +5,21 @@ class Stop {
     private String id;
     private double longitude;
     private double latitude;
+    private double waktu = -1;
 
     public Stop(String display_name, String id, double longitude, double latitude) {
         this.display_name = display_name;
         this.id = id;
         this.longitude = longitude;
         this.latitude = latitude;
+    }
+
+    public double getWaktu() {
+        return waktu;
+    }
+
+    public void setWaktu(double waktu) {
+        this.waktu = waktu;
     }
 
     public String getDisplay_name() {

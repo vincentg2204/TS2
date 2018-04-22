@@ -2,6 +2,7 @@ package com.example.windows10.ts2;
 
 
 import android.content.Context;
+import android.net.ConnectivityManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -23,6 +24,8 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -56,7 +59,7 @@ public class Fragment1 extends Fragment {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 Agency current = presenter.getAgency()[spinner.getSelectedItemPosition()];
-                getRoute("http://api.metro.net/agencies/"+current.getId()+"/routes/");
+                getRoute("http://api.metro.net/agencies/" + current.getId() + "/routes/");
             }
 
             @Override
@@ -79,12 +82,12 @@ public class Fragment1 extends Fragment {
         spinner.setAdapter(spinnerAdapter);
     }
 
-    public void updateRoute(Route[] route){
-        adapter = new ListAdapter(route ,ui, this);
+    public void updateRoute(Route[] route) {
+        adapter = new ListAdapter(route, ui, this);
         list.setAdapter(adapter);
     }
 
-    public static Fragment1 newInstance(MainPresenter presenter,MainActivity mainActivity, String title) {
+    public static Fragment1 newInstance(MainPresenter presenter, MainActivity mainActivity, String title) {
         Fragment1 fragment = new Fragment1();
         fragment.setMainActivity(mainActivity);
         fragment.setPresenter(presenter);
@@ -94,24 +97,44 @@ public class Fragment1 extends Fragment {
         return fragment;
     }
 
-    public void setMainActivity(MainActivity ui){
+    public void setMainActivity(MainActivity ui) {
         this.ui = ui;
     }
 
-    public void setPresenter(MainPresenter presenter){
+    public void setPresenter(MainPresenter presenter) {
         this.presenter = presenter;
     }
 
-    public void getRoute(String url){
+    public void getRoute(final String url) {
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url, new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
                 Log.d("ONRESPONSE", response);
                 Route[] routes = processResultRoute(response);
-                for(Route r : routes){
-                    r.setDisplay_name(r.getDisplay_name().replaceAll(r.getId(),"").trim());
-                }
                 presenter.setRoutes(routes);
+                for (int i=0;i<routes.length;i++) {
+                    presenter.getRoutes()[i].setDisplay_name(presenter.getRoutes()[i].getDisplay_name().replaceAll(presenter.getRoutes()[i].getId(), "").trim());
+                    final int finalI = i;
+                    StringRequest stringRequest1 = new StringRequest(
+                            Request.Method.GET,
+                            "http://api.metro.net/agencies/" + presenter.getAgency()[spinner.getSelectedItemPosition()].getId() + "/routes/" + presenter.getRoutes()[i].getId() + "/info/",
+                            new Response.Listener<String>() {
+                                @Override
+                                public void onResponse(String response) {
+                                    Log.d("COLOR",response);
+                                    Color colors = processResultColor(response);
+                                    presenter.getRoutes()[finalI].setFgColor(colors.getFg_color());
+                                    presenter.getRoutes()[finalI].setBgColor(colors.getBg_color());
+                                    ui.updateRoute();
+                                }
+                            }, new Response.ErrorListener() {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+
+                        }
+                    });
+                    queue.add(stringRequest1);
+                }
                 ui.updateRoute();
             }
         }, new Response.ErrorListener() {
@@ -122,26 +145,31 @@ public class Fragment1 extends Fragment {
         });
         queue.add(stringRequest);
     }
+    private Color processResultColor(String content){
+        Log.d("PROCESSCOLOR", content);
+        Gson gson = new Gson();
+        return gson.fromJson(content,Color.class);
+    }
 
     private Route[] processResultRoute(String content) {
-        Log.d("result_string",content);
-        try{
+        Log.d("result_string", content);
+        try {
             Gson gson = new Gson();
             JSONObject json = new JSONObject(content);
             JSONArray data = json.getJSONArray("items");
-            return gson.fromJson(data.toString(),Route[].class);
+            return gson.fromJson(data.toString(), Route[].class);
         } catch (JSONException e) {
             e.printStackTrace();
         }
         return null;
     }
 
-    public void getAgencies(String url){
+    public void getAgencies(String url) {
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url, new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
                 Log.d("ONRESPONSE", response);
-                Agency[] agencies= processResultAgencies(response);
+                Agency[] agencies = processResultAgencies(response);
                 presenter.setAgency(agencies);
                 ui.updateSpinner();
             }
@@ -155,15 +183,15 @@ public class Fragment1 extends Fragment {
     }
 
     private Agency[] processResultAgencies(String content) {
-        Log.d("result_string",content);
-        try{
+        Log.d("result_string", content);
+        try {
             JSONArray json = new JSONArray(content);
             Agency[] ag = new Agency[json.length()];
-            for(int i=0;i<json.length();i++){
+            for (int i = 0; i < json.length(); i++) {
                 JSONObject obj = json.getJSONObject(i);
                 String displayName = obj.getString("display_name");
                 String id = obj.getString("id");
-                ag[i] = new Agency(displayName,id);
+                ag[i] = new Agency(displayName, id);
             }
             return ag;
         } catch (JSONException e) {
@@ -175,14 +203,14 @@ public class Fragment1 extends Fragment {
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-        if(context instanceof FragmentListener){
-            this.listener = (FragmentListener)context;
-        }else{
+        if (context instanceof FragmentListener) {
+            this.listener = (FragmentListener) context;
+        } else {
             throw new ClassCastException(context.toString() + " must implement FragmentListener");
         }
     }
 
-    public void changePage(int page, int position){
+    public void changePage(int page, int position) {
         presenter.setcRoute(presenter.getRoutes()[position]);
         presenter.setcAgency(presenter.getAgency()[spinner.getSelectedItemPosition()]);
         listener.changePage(page);

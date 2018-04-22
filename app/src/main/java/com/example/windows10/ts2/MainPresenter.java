@@ -36,9 +36,11 @@ public class MainPresenter {
 
     public void setStops(Stop[] stops) {
         this.stops = stops;
+        updateStop();
+    }
+    public void updateStop(){
         ui.updateStop();
     }
-
     public Agency getcAgency() {
         return cAgency;
     }
